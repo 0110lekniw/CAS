@@ -69,7 +69,6 @@ def main(timeStep = 5, timeElapsed = 0, dangerZoneTime = 0,  intruderPosition = 
                 linearQuadraticCoefficients = np.poly1d([predictedTrajectory[0], predictedTrajectory[1]-linear_coordinates[0],
                                                predictedTrajectory[2]-linear_coordinates[1]])
                 newCollisionPointECoordinate = np.min(optimize.fsolve(linearQuadraticCoefficients, np.array([startingX+100000])))
-                newCollisionPointECoordinate2 = geometrical.LinearQuadraticCommonPoint(linear_coordinates, predictedTrajectory)
                 newCollisionPoint = [newCollisionPointECoordinate,
                                      linear_coordinates[0]*(newCollisionPointECoordinate)+linear_coordinates[1]]
                 #upadate of the trajectory, if it move toward own plane
@@ -92,6 +91,8 @@ def main(timeStep = 5, timeElapsed = 0, dangerZoneTime = 0,  intruderPosition = 
                 #calculate the difference between times:
                 differenceBetweenTime = intruderTimeToCP - ownTime
                 print("Time difference: " + str(round(differenceBetweenTime, 3)) +"s")
+                distanceToSafetyZone = ownDistanceToCP - ownVelocity*LoSM*60
+                
 
 
 
