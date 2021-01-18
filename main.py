@@ -66,32 +66,43 @@ def main(timeStep = 5, timeElapsed = 0, dangerZoneTime = 0,  intruderPosition = 
                 predictedTrajectory = np.polyfit(dangerDataArray[:, 0], dangerDataArray[:, 1], 2)
                 startingX = int(round(dangerDataArray[0, 0]))
                 # calculating collision point as the intersection of known own extrapolated trajectory
-                linearQuadraticCoefficients = np.poly1d([predictedTrajectory[0], predictedTrajectory[1]-linear_coordinates[0],
-                                               predictedTrajectory[2]-linear_coordinates[1]])
-                newCollisionPointECoordinate = np.min(optimize.fsolve(linearQuadraticCoefficients, np.array([startingX+100000])))
-                newCollisionPointECoordinate2 = geometrical.LinearQuadraticCommonPoint(linear_coordinates, predictedTrajectory)
+                linearQuadraticCoefficients = np.poly1d([predictedTrajectory[0], predictedTrajectory[1] -
+                                                         linear_coordinates[0], predictedTrajectory[2]-
+                                                         linear_coordinates[1]])
+                newCollisionPointECoordinate = np.min(optimize.fsolve(linearQuadraticCoefficients,
+                                                                      np.array([startingX+100000])))
                 newCollisionPoint = [newCollisionPointECoordinate,
                                      linear_coordinates[0]*(newCollisionPointECoordinate)+linear_coordinates[1]]
-                #upadate of the trajectory, if it move toward own plane
+                #upadate the trajectory, if it move toward own plane
                 if round(geometrical.DistanceBetweenPoints(collisionPoint, ownStartingPoint), 2) == 0:
                     collisionPoint = newCollisionPoint
                 elif round(geometrical.DistanceBetweenPoints(collisionPoint, ownStartingPoint), 2) > \
                         round(geometrical.DistanceBetweenPoints(newCollisionPoint, ownStartingPoint), 2):
                     collisionPoint = newCollisionPoint
+                del newCollisionPoint
                 #calculateIntruderTheTimeToCollisionPoint
-                intruderVelocity = VelocityCalculator(dangerDataArray[:2, -1], dangerDataArray[:2, -2], timeStep)
-                intruderDistanceToCP = geometrical.LengthOfTheParaboleBetweenPoints([dangerDataArray[0, -1],
-                                                                                     dangerDataArray[0, -2]],
-                                                                                    predictedTrajectory)
+                intruderVelocity = VelocityCalculator(dangerDataArray[-1, :2], dangerDataArray[-2, :2], timeStep)
+                intruderDistanceToCP = abs(geometrical.LengthOfTheParaboleBetweenPoints([inputData[4],
+                                                                                     collisionPoint[0]],
+                                                                                    predictedTrajectory))
                 intruderTimeToCP = intruderDistanceToCP/intruderVelocity
 
                 #calculate own time to Collison Point
-                ownDistanceToCP = geometrical.DistanceBetweenPoints(formerInput[1:3], inputData[1:3])
+                ownDistanceToCP = abs(geometrical.DistanceBetweenPoints(collisionPoint, inputData[1:3]))
                 ownTime = ownDistanceToCP/ownVelocity
 
                 #calculate the difference between times:
                 differenceBetweenTime = intruderTimeToCP - ownTime
-                print("Time difference: " + str(round(differenceBetweenTime, 3)) +"s")
+                print("Time difference: " + str(round(differenceBetweenTime, 3)) + "s")
+                if differenceBetweenTime < 0:
+                    print("descend")
+                else:
+                    d = intruderTimeToCP*ownVelocity
+                    R = ownVelocity*LoSM*60
+                    ownd = ownDistanceToCP
+                    cosAlpha = (R**2-(d**2+ownd**2))/(-2*d*ownd)
+                    Alpha = np.arccos(cosAlpha)
+                    print(Alpha)
 
 
 
