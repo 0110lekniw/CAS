@@ -43,17 +43,20 @@ def main(timeStep = 5, timeElapsed = 0, dangerZoneTime = 0,  intruderPosition = 
 # defining an array for possible danger
     dangerData = []
     collisionPoint = ownStartingPoint
-    maneouverPoints = []
+    maneouverPoints = np.zeros([5, 2])
+    previousDistance = 1000000
+    previousTimeToCollision = 0
 
     while(inputData[1]<ownFinalPoint[0]):
         # updating the data after time = timeStep
         formerInput = inputData
         inputData = UpdateInputData(inputData, timeStep)
         # calculating LoSM
-        if inputData[5] - formerInput[5] < 0:
-            timeToCollision = CollisionTimeCalc(formerInput[5], inputData[5], formerInput[0], inputData[0])
-            print("Danger of Collision in :" + str(timeToCollision))
-            # check if the aircrafts if the seperation is sufficient
+        timeToCollision = CollisionTimeCalc(formerInput[5], inputData[5], formerInput[0], inputData[0])
+        print("Danger of Collision in :" + str(abs(timeToCollision)))
+        condition = timeToCollision - previousTimeToCollision > 0
+        # check if the aircrafts if the seperation is sufficient
+        if condition:
             if timeToCollision < LoSM * safetyCoefficient:
                 if round(timeToCollision, 2) == 0:
                     print("BUM")
@@ -88,45 +91,53 @@ def main(timeStep = 5, timeElapsed = 0, dangerZoneTime = 0,  intruderPosition = 
                     intruderDistanceToCP = abs(geometrical.LengthOfTheParaboleBetweenPoints([inputData[4],
                                                                                          collisionPoint[0]],
                                                                                         predictedTrajectory))
-                    intruderDistanceToCP2 = geometrical.LengthOfAPolynolam(inputData[4], collisionPoint[0], 10,
-                                                                           predictedTrajectory)
+
                     intruderTimeToCP = intruderDistanceToCP/intruderVelocity
+    #                   intruderDistanceToCP2 = geometrical.LengthOfAPolynolam(inputData[4], collisionPoint[0], 10,
+    #                                                                           predictedTrajectory)
+    #                   intruderTimeToCP2 = intruderDistanceToCP2 / intruderVelocity
 
                     #calculate own time to Collison Point
                     ownDistanceToCP = abs(geometrical.DistanceBetweenPoints(collisionPoint, inputData[1:3]))
                     ownTime = ownDistanceToCP/ownVelocity
-
+                    if  ownDistanceToCP - previousDistance > 0:
+                        break
                     #calculate the difference between times:
                     differenceBetweenTime = intruderTimeToCP - ownTime
                     print("Time difference: " + str(round(differenceBetweenTime, 3)) + "s")
                     if differenceBetweenTime > 0:
                         print("descend")
                     else:
-                        d = intruderTimeToCP*ownVelocity
                         R = ownVelocity*LoSM*60
-                        ownd = ownDistanceToCP
+                        ownd = 2*R
+                        distanceToCP = abs(differenceBetweenTime*ownVelocity)
+                        d = ownd - distanceToCP
                         cosAlpha = (R**2-(d**2+ownd**2))/(-2*d*ownd)
                         Alpha = np.arccos(cosAlpha)
                         print(Alpha)
                         coefficient = linear_coordinates[0]
                         cosBeta = 1
                         if coefficient < 0:
-                            cosBeta = math.cos(math.pi - math.atan(coefficient))
+                            cosBeta = math.cos( - math.atan(coefficient))
                         elif coefficient > 0:
                             cosBeta = math.cos(math.atan(coefficient))
                         sign = 1
                         if inputData[1] < formerInput[1]:
                             sign = -1
-                        deltaX1 = d*cosBeta
+                        deltaX1 = distanceToCP*cosBeta
                         deltaX2 = 2*R
-                        maneouverPoints.append([inputData[0]+deltaX1*sign, (inputData[0]+deltaX1*sign)*
+                        maneouverPoints[0, :] = ([collisionPoint[0]-deltaX1*sign, (collisionPoint[0]-deltaX1*sign)*
                                                           linear_coordinates[0]+linear_coordinates[1]])
-                        maneouverPoints.append([collisionPoint[0]-deltaX2*sign, (collisionPoint[0]-deltaX2*sign)*
+                        maneouverPoints[1, :] = ([collisionPoint[0]-deltaX2*sign, (collisionPoint[0]-deltaX2*sign)*
                                            linear_coordinates[0]+linear_coordinates[1]])
+                        rotated = geometrical.turnAroundPoint(maneouverPoints[0, :], Alpha, maneouverPoints[1, :])
+                        maneouverPoints[2, :] = rotated
+                        axisOfSymetry = geometrical.PerpendicularLineFromPoint(linear_coordinates[0], collisionPoint)
+                        maneouverPoints[3:5, :] = geometrical.MirrorByAxis(np.vstack((maneouverPoints[1],
+                                                                                     maneouverPoints[2])),
+                                                                          axisOfSymetry)
                         print(maneouverPoints)
-
-
-
+        previousTimeToCollision = timeToCollision
         outputData.append([inputData[0], inputData[1], inputData[2], inputData[3], inputData[4], inputData[5],
                            timeToCollision, collisionPoint[0], collisionPoint[1]])
 
@@ -135,6 +146,7 @@ def main(timeStep = 5, timeElapsed = 0, dangerZoneTime = 0,  intruderPosition = 
 
     outputArray = np.array(outputData)
     ax.scatter(outputArray[-1, -2], outputArray[-1, -1], c="r")
+    ax.scatter(maneouverPoints[:, 0], maneouverPoints[:, 1], c="blue")
     draw_circle = plt.Circle((outputArray[-1, -2], outputArray[-1, -1]), ownVelocity*LoSM*60, fill=False)
     ax.add_artist(draw_circle)
     ax.plot(outputArray[:, 1], outputArray[:, 2], c="green")

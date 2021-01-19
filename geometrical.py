@@ -69,6 +69,10 @@ def LineFromTwoPoints(points):
     lineCoefficients = [a, b]
     return lineCoefficients
 
+def PerpendicularLineFromPoint(linearCoefficient, point):
+    perpendicularLine = [-1/linearCoefficient, point[1]-(-1/linearCoefficient*point[0])]
+    return perpendicularLine
+
 def TrackLinear(linearCoeeficients, numberOfPoints, startPoint, finalPoint):
     tracksCoordinates = np.zeros([numberOfPoints, 2])
     dValue = (finalPoint[0] - startPoint[0])/numberOfPoints
@@ -117,14 +121,30 @@ def LengthOfAPolynolam(StartingPoint, FinalPoint, smallestDistance, coefficients
         print("Distance cannot be negastive or zero")
         sys.exit()
     function = np.poly1d(coefficients)
-    numberOfPoints = int(round(abs(FinalPoint- StartingPoint)/smallestDistance, 0))
+    numberOfPoints = int(round(abs(FinalPoint-StartingPoint)/smallestDistance,0))
+    newPoints = np.linspace(int(round(StartingPoint+smallestDistance, 0)),  int(round(FinalPoint-smallestDistance, 0)),
+                            numberOfPoints)
     length = 0
-    for i in range(numberOfPoints-1):
-        pointA = [StartingPoint+smallestDistance*i, function(StartingPoint+smallestDistance*i)]
-        if i < numberOfPoints-2:
-            pointB = [StartingPoint+smallestDistance*(1+i), function(StartingPoint+smallestDistance*(1+i))]
-        else:
-            pointB = FinalPoint
-        length+= DistanceBetweenPoints(pointA, pointB)
+    for i in range(newPoints.shape[0]-1):
+
+        pointA = [newPoints[i], function(newPoints[i])]
+        if i == 0:
+            pointA = [StartingPoint, function(StartingPoint)]
+
+        pointB = [newPoints[i+1], function(newPoints[i+1])]
+        if i == newPoints.shape[0]-1:
+            pointB = [FinalPoint, function(FinalPoint)]
+
+        length += DistanceBetweenPoints(pointA, pointB)
     return length
 
+def MirrorByAxis(points, linearCoefficients):
+    aPerpendicular = -1/linearCoefficients[0]
+    mirroredPoints = np.zeros((points.shape[0], points.shape[1]))
+    for i in range(points.shape[0]):
+        bPerependicular = points[i, 1] - points[i, 0]*aPerpendicular
+        x = (linearCoefficients[1] - bPerependicular)/(aPerpendicular - linearCoefficients[0])
+        intersectionPoint = [x, x*aPerpendicular+bPerependicular]
+        mirroredPoints[i, 0] = 2*intersectionPoint[0]-points[i, 0]
+        mirroredPoints[i, 1] = 2*intersectionPoint[1]-points[i, 1]
+    return mirroredPoints
