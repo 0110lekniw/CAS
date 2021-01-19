@@ -1,4 +1,6 @@
 import math
+import sys
+
 import numpy as np
 
 #Vectors
@@ -109,3 +111,20 @@ def LengthOfTheParaboleBetweenPoints(points, parabole):
                      DerevativesValueForPoint(xTo)*math.sqrt(DerevativesValueForPoint(xTo)**2+1) -
                      DerevativesValueForPoint(xFrom)*math.sqrt(DerevativesValueForPoint(xFrom)**2+1))
     return lengthValue
+
+def LengthOfAPolynolam(StartingPoint, FinalPoint, smallestDistance, coefficients):
+    if smallestDistance <= 0:
+        print("Distance cannot be negastive or zero")
+        sys.exit()
+    function = np.poly1d(coefficients)
+    numberOfPoints = int(round(abs(FinalPoint- StartingPoint)/smallestDistance, 0))
+    length = 0
+    for i in range(numberOfPoints-1):
+        pointA = [StartingPoint+smallestDistance*i, function(StartingPoint+smallestDistance*i)]
+        if i < numberOfPoints-2:
+            pointB = [StartingPoint+smallestDistance*(1+i), function(StartingPoint+smallestDistance*(1+i))]
+        else:
+            pointB = FinalPoint
+        length+= DistanceBetweenPoints(pointA, pointB)
+    return length
+

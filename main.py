@@ -50,77 +50,80 @@ def main(timeStep = 5, timeElapsed = 0, dangerZoneTime = 0,  intruderPosition = 
         formerInput = inputData
         inputData = UpdateInputData(inputData, timeStep)
         # calculating LoSM
-        timeToCollision = CollisionTimeCalc(formerInput[5], inputData[5], formerInput[0], inputData[0])
-        print("Danger of Collision in :" + str(timeToCollision))
-        # check if the aircrafts if the seperation is sufficient
-        if timeToCollision < LoSM * safetyCoefficient:
-            if round(timeToCollision, 2) == 0:
-                print("BUM")
-                break
-            # increasing the frequency of signal receiving
-            timeStep = 1
-            # record the position of the intruder
-            dangerData.append([inputData[3], inputData[4], inputData[5]])
-            dangerZoneTime += 1
-            if (dangerZoneTime/30).is_integer():
-                dangerDataArray = np.array(dangerData)
-                # use of recorded data to predict the trajectory with the quadratic extrapolation
-                predictedTrajectory = np.polyfit(dangerDataArray[:, 0], dangerDataArray[:, 1], 2)
-                startingX = int(round(dangerDataArray[0, 0]))
-                # calculating collision point as the intersection of known own extrapolated trajectory
-                linearQuadraticCoefficients = np.poly1d([predictedTrajectory[0], predictedTrajectory[1] -
-                                                         linear_coordinates[0], predictedTrajectory[2]-
-                                                         linear_coordinates[1]])
-                newCollisionPointECoordinate = np.min(optimize.fsolve(linearQuadraticCoefficients,
-                                                                      np.array([startingX+100000])))
-                newCollisionPoint = [newCollisionPointECoordinate,
-                                     linear_coordinates[0]*(newCollisionPointECoordinate)+linear_coordinates[1]]
-                #upadate the trajectory, if it move toward own plane
-                if round(geometrical.DistanceBetweenPoints(collisionPoint, ownStartingPoint), 2) == 0:
-                    collisionPoint = newCollisionPoint
-                elif round(geometrical.DistanceBetweenPoints(collisionPoint, ownStartingPoint), 2) > \
-                        round(geometrical.DistanceBetweenPoints(newCollisionPoint, ownStartingPoint), 2):
-                    collisionPoint = newCollisionPoint
-                del newCollisionPoint
-                #calculateIntruderTheTimeToCollisionPoint
-                intruderVelocity = VelocityCalculator(dangerDataArray[-1, :2], dangerDataArray[-2, :2], timeStep)
-                intruderDistanceToCP = abs(geometrical.LengthOfTheParaboleBetweenPoints([inputData[4],
-                                                                                     collisionPoint[0]],
-                                                                                    predictedTrajectory))
-                intruderTimeToCP = intruderDistanceToCP/intruderVelocity
+        if inputData[5] - formerInput[5] < 0:
+            timeToCollision = CollisionTimeCalc(formerInput[5], inputData[5], formerInput[0], inputData[0])
+            print("Danger of Collision in :" + str(timeToCollision))
+            # check if the aircrafts if the seperation is sufficient
+            if timeToCollision < LoSM * safetyCoefficient:
+                if round(timeToCollision, 2) == 0:
+                    print("BUM")
+                    break
+                # increasing the frequency of signal receiving
+                timeStep = 1
+                # record the position of the intruder
+                dangerData.append([inputData[3], inputData[4], inputData[5]])
+                dangerZoneTime += 1
+                if (dangerZoneTime/30).is_integer():
+                    dangerDataArray = np.array(dangerData)
+                    # use of recorded data to predict the trajectory with the quadratic extrapolation
+                    predictedTrajectory = np.polyfit(dangerDataArray[:, 0], dangerDataArray[:, 1], 2)
+                    startingX = int(round(dangerDataArray[0, 0]))
+                    # calculating collision point as the intersection of known own extrapolated trajectory
+                    linearQuadraticCoefficients = np.poly1d([predictedTrajectory[0], predictedTrajectory[1] -
+                                                             linear_coordinates[0], predictedTrajectory[2]-
+                                                             linear_coordinates[1]])
+                    newCollisionPointECoordinate = np.min(optimize.fsolve(linearQuadraticCoefficients,
+                                                                          np.array([startingX+100000])))
+                    newCollisionPoint = [newCollisionPointECoordinate,
+                                         linear_coordinates[0]*(newCollisionPointECoordinate)+linear_coordinates[1]]
+                    #upadate the trajectory, if it move toward own plane
+                    if round(geometrical.DistanceBetweenPoints(collisionPoint, ownStartingPoint), 2) == 0:
+                        collisionPoint = newCollisionPoint
+                    elif round(geometrical.DistanceBetweenPoints(collisionPoint, ownStartingPoint), 2) > \
+                            round(geometrical.DistanceBetweenPoints(newCollisionPoint, ownStartingPoint), 2):
+                        collisionPoint = newCollisionPoint
+                    del newCollisionPoint
+                    #calculateIntruderTheTimeToCollisionPoint
+                    intruderVelocity = VelocityCalculator(dangerDataArray[-1, :2], dangerDataArray[-2, :2], timeStep)
+                    intruderDistanceToCP = abs(geometrical.LengthOfTheParaboleBetweenPoints([inputData[4],
+                                                                                         collisionPoint[0]],
+                                                                                        predictedTrajectory))
+                    intruderDistanceToCP2 = geometrical.LengthOfAPolynolam(inputData[4], collisionPoint[0], 10,
+                                                                           predictedTrajectory)
+                    intruderTimeToCP = intruderDistanceToCP/intruderVelocity
 
-                #calculate own time to Collison Point
-                ownDistanceToCP = abs(geometrical.DistanceBetweenPoints(collisionPoint, inputData[1:3]))
-                ownTime = ownDistanceToCP/ownVelocity
+                    #calculate own time to Collison Point
+                    ownDistanceToCP = abs(geometrical.DistanceBetweenPoints(collisionPoint, inputData[1:3]))
+                    ownTime = ownDistanceToCP/ownVelocity
 
-                #calculate the difference between times:
-                differenceBetweenTime = intruderTimeToCP - ownTime
-                print("Time difference: " + str(round(differenceBetweenTime, 3)) + "s")
-                if differenceBetweenTime > 0:
-                    print("descend")
-                else:
-                    d = intruderTimeToCP*ownVelocity
-                    R = ownVelocity*LoSM*60
-                    ownd = ownDistanceToCP
-                    cosAlpha = (R**2-(d**2+ownd**2))/(-2*d*ownd)
-                    Alpha = np.arccos(cosAlpha)
-                    print(Alpha)
-                    coefficient = linear_coordinates[0]
-                    cosBeta = 1
-                    if coefficient < 0:
-                        cosBeta = math.cos(math.pi - math.atan(coefficient))
-                    elif coefficient > 0:
-                        cosBeta = math.cos(math.atan(coefficient))
-                    sign = 1
-                    if inputData[1] < formerInput[1]:
-                        sign = -1
-                    deltaX1 = d*cosBeta
-                    deltaX2 = 2*R
-                    maneouverPoints.append([inputData[0]+deltaX1*sign, (inputData[0]+deltaX1*sign)*
-                                                      linear_coordinates[0]+linear_coordinates[1]])
-                    maneouverPoints.append([collisionPoint[0]-deltaX2*sign, (collisionPoint[0]-deltaX2*sign)*
-                                       linear_coordinates[0]+linear_coordinates[1]])
-                    print(maneouverPoints)
+                    #calculate the difference between times:
+                    differenceBetweenTime = intruderTimeToCP - ownTime
+                    print("Time difference: " + str(round(differenceBetweenTime, 3)) + "s")
+                    if differenceBetweenTime > 0:
+                        print("descend")
+                    else:
+                        d = intruderTimeToCP*ownVelocity
+                        R = ownVelocity*LoSM*60
+                        ownd = ownDistanceToCP
+                        cosAlpha = (R**2-(d**2+ownd**2))/(-2*d*ownd)
+                        Alpha = np.arccos(cosAlpha)
+                        print(Alpha)
+                        coefficient = linear_coordinates[0]
+                        cosBeta = 1
+                        if coefficient < 0:
+                            cosBeta = math.cos(math.pi - math.atan(coefficient))
+                        elif coefficient > 0:
+                            cosBeta = math.cos(math.atan(coefficient))
+                        sign = 1
+                        if inputData[1] < formerInput[1]:
+                            sign = -1
+                        deltaX1 = d*cosBeta
+                        deltaX2 = 2*R
+                        maneouverPoints.append([inputData[0]+deltaX1*sign, (inputData[0]+deltaX1*sign)*
+                                                          linear_coordinates[0]+linear_coordinates[1]])
+                        maneouverPoints.append([collisionPoint[0]-deltaX2*sign, (collisionPoint[0]-deltaX2*sign)*
+                                           linear_coordinates[0]+linear_coordinates[1]])
+                        print(maneouverPoints)
 
 
 
