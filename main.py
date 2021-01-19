@@ -46,6 +46,7 @@ def main(timeStep = 5, timeElapsed = 0, dangerZoneTime = 0,  intruderPosition = 
     maneouverPoints = np.zeros([5, 2])
     previousDistance = 1000000
     previousTimeToCollision = 0
+    newManeouverPoints = np.zeros((150, 2))
 
     while(inputData[1]<ownFinalPoint[0]):
         # updating the data after time = timeStep
@@ -136,7 +137,68 @@ def main(timeStep = 5, timeElapsed = 0, dangerZoneTime = 0,  intruderPosition = 
                         maneouverPoints[3:5, :] = geometrical.MirrorByAxis(np.vstack((maneouverPoints[1],
                                                                                      maneouverPoints[2])),
                                                                           axisOfSymetry)
-                        print(maneouverPoints)
+                        #calculating the coefficients of the first function
+                        x1 = maneouverPoints[1][0]
+                        x2 = maneouverPoints[2][0]
+                        y1 = maneouverPoints[1][1]
+                        y2 = maneouverPoints[2][1]
+                        A = np.array([[1/2*x1, 1, 0], [x1**2, x1, 1], [x2**2, x2, 1]])
+                        B = np.array([[linear_coordinates[0]*x1+linear_coordinates[1]], [y1], [y2]])
+                        del x1, x2, y1, y2
+                        X = np.linalg.solve(A, B).tolist()
+                        C = [X[0][0], X[1][0], X[2][0]]
+                        del A, B
+                        function_one = np.poly1d(C)
+                        del X
+                        # calculating the coefficients of the second function
+                        x1 = maneouverPoints[3][0]
+                        x2 = maneouverPoints[4][0]
+                        y1 = maneouverPoints[3][1]
+                        y2 = maneouverPoints[4][1]
+                        A = np.array([[1 / 2 * x2, 1, 0], [x1 ** 2, x1, 1], [x2 ** 2, x2, 1]])
+                        B = np.array([[linear_coordinates[0] * x2 + linear_coordinates[1]], [y1], [y2]])
+                        del x1, x2, y1, y2
+                        X = np.linalg.solve(A, B).tolist()
+                        C = [X[0][0], X[1][0], X[2][0]]
+                        del A, B
+                        function_two = np.poly1d(C)
+                        del X
+                        #calculating the coefficients of the first function
+                        x1 = maneouverPoints[1][0]
+                        x2 = maneouverPoints[2][0]
+                        y1 = maneouverPoints[1][1]
+                        y2 = maneouverPoints[2][1]
+                        A = np.array([[1/2*x1, 1, 0], [x1**2, x1, 1], [x2**2, x2, 1]])
+                        B = np.array([[linear_coordinates[0]*x1+linear_coordinates[1]], [y1], [y2]])
+                        del x1, x2, y1, y2
+                        X = np.linalg.solve(A, B).tolist()
+                        C = [X[0][0], X[1][0], X[2][0]]
+                        del A, B
+                        function_one = np.poly1d(C)
+                        del X
+                        #calculating the coefficients of the third function
+                        x1 = maneouverPoints[3][0]
+                        x2 = maneouverPoints[2][0]
+                        y1 = maneouverPoints[3][1]
+                        A = np.array([[1/2*x1, 1, 0], [1/2*x2, 1, 0], [x1**2, x1, 1]])
+                        B = np.array([[1/2*function_two[0]*x1+function_two[1]], [1/2*function_one[0]*x2+function_one[1]], [y1]])
+                        del x1, x2, y1
+                        X = np.linalg.solve(A, B).tolist()
+                        C = [X[0][0], X[1][0], X[2][0]]
+                        del A, B
+                        function_three = np.poly1d(C)
+                        del X
+                        points_one = np.linspace(maneouverPoints[1][0], maneouverPoints[2][0], 50)
+                        for i in range(points_one.shape[0]):
+                            newManeouverPoints[i, :] = [points_one[i], function_one(points_one[i])]
+                        points_two = np.linspace(maneouverPoints[2][0], maneouverPoints[3][0], 50)
+                        for i in range(points_two.shape[0]):
+                            newManeouverPoints[50+i, :] = [points_two[i], function_two(points_two[i])]
+                        points_three = np.linspace(maneouverPoints[3][0], maneouverPoints[4][0], 50)
+                        for i in range(points_three.shape[0]):
+                            newManeouverPoints[100+i, :] = [points_three[i], function_three(points_three[i])]
+                        print (newManeouverPoints)
+
         previousTimeToCollision = timeToCollision
         outputData.append([inputData[0], inputData[1], inputData[2], inputData[3], inputData[4], inputData[5],
                            timeToCollision, collisionPoint[0], collisionPoint[1]])
@@ -147,6 +209,7 @@ def main(timeStep = 5, timeElapsed = 0, dangerZoneTime = 0,  intruderPosition = 
     outputArray = np.array(outputData)
     ax.scatter(outputArray[-1, -2], outputArray[-1, -1], c="r")
     ax.scatter(maneouverPoints[:, 0], maneouverPoints[:, 1], c="blue")
+    ax.scatter(newManeouverPoints[:, 0], newManeouverPoints[:, 1], c="red")
     draw_circle = plt.Circle((outputArray[-1, -2], outputArray[-1, -1]), ownVelocity*LoSM*60, fill=False)
     ax.add_artist(draw_circle)
     ax.plot(outputArray[:, 1], outputArray[:, 2], c="green")
