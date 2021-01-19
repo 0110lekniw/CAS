@@ -2,6 +2,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import get_position
 import geometrical
+import math
 from scipy import optimize
 from geometrical import LinearQuadraticCommonPoint
 from initial_data import ownStartingPoint, intruderStartingPoint, safetyCoefficient, LoSM, ownFinalPoint, ownVelocity
@@ -42,6 +43,7 @@ def main(timeStep = 5, timeElapsed = 0, dangerZoneTime = 0,  intruderPosition = 
 # defining an array for possible danger
     dangerData = []
     collisionPoint = ownStartingPoint
+    maneouverPoints = []
 
     while(inputData[1]<ownFinalPoint[0]):
         # updating the data after time = timeStep
@@ -94,7 +96,7 @@ def main(timeStep = 5, timeElapsed = 0, dangerZoneTime = 0,  intruderPosition = 
                 #calculate the difference between times:
                 differenceBetweenTime = intruderTimeToCP - ownTime
                 print("Time difference: " + str(round(differenceBetweenTime, 3)) + "s")
-                if differenceBetweenTime < 0:
+                if differenceBetweenTime > 0:
                     print("descend")
                 else:
                     d = intruderTimeToCP*ownVelocity
@@ -103,7 +105,22 @@ def main(timeStep = 5, timeElapsed = 0, dangerZoneTime = 0,  intruderPosition = 
                     cosAlpha = (R**2-(d**2+ownd**2))/(-2*d*ownd)
                     Alpha = np.arccos(cosAlpha)
                     print(Alpha)
-
+                    coefficient = linear_coordinates[0]
+                    cosBeta = 1
+                    if coefficient < 0:
+                        cosBeta = math.cos(math.pi - math.atan(coefficient))
+                    elif coefficient > 0:
+                        cosBeta = math.cos(math.atan(coefficient))
+                    sign = 1
+                    if inputData[1] < formerInput[1]:
+                        sign = -1
+                    deltaX1 = d*cosBeta
+                    deltaX2 = 2*R
+                    maneouverPoints.append([inputData[0]+deltaX1*sign, (inputData[0]+deltaX1*sign)*
+                                                      linear_coordinates[0]+linear_coordinates[1]])
+                    maneouverPoints.append([collisionPoint[0]-deltaX2*sign, (collisionPoint[0]-deltaX2*sign)*
+                                       linear_coordinates[0]+linear_coordinates[1]])
+                    print(maneouverPoints)
 
 
 

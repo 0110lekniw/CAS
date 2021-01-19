@@ -9,7 +9,7 @@ temperature = T0 - 6.5/1000*altitude
 speedOfSound = math.sqrt(gasouesConstant*adiabaticIndex*temperature)
 
 #initial data of the intruder plane
-intruderMachNumber = 0.95
+intruderMachNumber = 1.1
 intruderVelocity = intruderMachNumber*speedOfSound
 
 #intruder path points
@@ -18,7 +18,7 @@ intruderMiddlePoint = [295000, 341000]
 intruderFinalPoint = [0, 0]
 
 #initial data of own plane
-ownMachNumber = 1.1
+ownMachNumber = 0.95
 ownVelocity = ownMachNumber * speedOfSound
 
 #own path points
